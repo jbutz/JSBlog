@@ -1,0 +1,205 @@
+<!doctype html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>JS Blog</title>
+	<style>
+		#appView {
+			width: 700px;
+			margin: auto;
+		}
+		.blogPost header {
+			text-shadow: 2px 1px #A9A9A9;
+			font-size: 1.1em;
+			font-weight: bold;
+			font-family: serif;
+		}
+		.blogPost footer {
+			border-top: 1px solid #C8C8C8;
+			margin-bottom: 15px;
+			font-size: 0.8em;
+			font-family: sans-serif
+		}
+		.blogPost .body {
+			padding: 5px 5px 5px 10px;;
+			font-family: serif;
+		}
+		.blogPost .deletePost {
+			padding-left: 50px;
+			cursor: pointer;
+			font-family: monospace;
+			font-weight: 500;
+		}
+	</style>
+	<script src="jquery-1.6.2.min.js"></script>
+	<script src="underscore-min.js"></script>
+	<script src="backbone-min.js"></script>
+	<!-- <script src="backbone.localStorage-min.js"></script> -->
+	<script src="backbone.localStorage.js"></script>
+	<script>
+
+$(document).ready(function()
+{
+	window.Post = Backbone.Model.extend(
+	{
+		defaults: {
+			datetime: null,
+			body: null,
+			subject: null,
+		}
+	});
+
+	window.PostView = Backbone.View.extend(
+	{
+		tagName: "div",
+		className: "blogPost",
+		events: {
+			"click .deletePost" : "delete"
+		},
+		initialize: function()
+		{
+			this.model.bind('change', this.render, this);
+			this.render = _.bind(this.render, this);
+		},
+		render: function()
+		{
+			var template = _.template($("#postTemplate").html());
+
+			$(this.el).html(template(this.model.toJSON()));
+
+			return this;
+		},
+		delete: function()
+		{
+			this.model.destroy();
+			this.remove();
+		}
+	});
+
+	window.Blog = Backbone.Collection.extend(
+	{
+		model: window.Post,
+		localStorage: new Store("Blog"),
+		comparator: function(post)
+		{
+			return -1 * post.get('datetime');
+		}
+	});
+
+	window.BlogView = Backbone.View.extend(
+	{
+		tagName: "div",
+		target: "#appView",
+		postViews: {},
+		initialize: function()
+		{
+			_(this).bindAll('render', 'add', 'load');
+			this.collection.bind('reset', this.load, this);
+			this.collection.fetch();
+		},
+		render: function()
+		{
+			var that = this;
+			$(this.el).empty();
+			_.each(this.collection.models, function(post)
+			{
+				$(that.el).append(that.postViews[post.get('id')].render().el);
+			});
+			$(this.target).html(this.el);
+			return this;
+		},
+		add: function(post)
+		{
+			var dt = new Date();
+			post.set({
+				id: dt.valueOf(),
+				datetime: dt.getMonth()+"/"+dt.getDate()+"/"+dt.getFullYear()+" "+dt.getHours()+":"+dt.getMinutes()
+			});
+			this.collection.create(post.toJSON());
+			this.postViews[post.get('id')] = new window.PostView({model: post});
+			console.log(this.collection.toJSON());
+			this.render();
+		},
+		load: function()
+		{
+			var that = this;
+			_.each(this.collection.models, function(post)
+			{
+				that.postViews[post.get('id')] = new window.PostView({model: post});
+			});
+		},
+		clear: function()
+		{
+			this.postViews = {};
+			_.each(this.collection.models,function(post)
+			{
+				post.destroy();
+			});
+			this.collection.reset();
+		},
+		submit: function()
+		{
+			var subject = $('#postSubject');
+			var body = $('#postBody');
+			this.add(new window.Post({subject: $('#postSubject').val(), body: $('#postBody').val()}));
+			$('#postSubject').val("");
+			$('#postBody').val("");
+		},
+		backup: function()
+		{
+			var store = localStorage.getItem("Blog");
+			var records = (store && store.split(",")) || [];
+			var out = {};
+			_.each(records, function(id)
+			{
+				out[id] = JSON.parse(localStorage.getItem("Blog-"+id));
+			});
+			return out;	
+		},
+		restore: function(data)
+		{
+			localStorage.clear();
+			var vJSON = $.parseJSON(data);
+			_.each(vJSON,function(elem)
+			{
+				var id = elem.id;
+				var store = localStorage.getItem("Blog");
+				var records = (store && store.split(",")) || [];
+
+				localStorage.setItem("Blog-"+id, JSON.stringify(elem));
+				records.push(id.toString());
+				localStorage.setItem("Blog", records.join(","));
+				window.location.reload(true);
+			});
+		}
+	});
+
+		window.App = new window.BlogView({collection: new window.Blog()});
+		window.App.render();
+});
+	function clickedButton()
+	{
+		window.App.restore('{"123456":{"body": "Hello World","datetime":"01/01/01 01:01","id":"123456","subject":"Foo Bar"}}');
+	}
+	</script>
+</head>
+<body>
+<button onClick="clickedButton();">TEST</button>
+<button onClick="window.App.clear();">Empty</button>
+<section>
+<label>Subject</label><input type='text' id='postSubject'><br>
+<label>Body</label><br><textarea id='postBody' rows='10' cols='30'></textarea>
+<button onClick='window.App.submit();'>Post</button>
+</section>
+<div id="appView"></div>
+<script type="text/template"  id="postTemplate">
+<article>
+<header><%= subject %></header>
+<div class='body'>
+<%= body %>
+</div>
+<footer><%= datetime %> <span class='deletePost' title='Delete this post'>X</span></footer>
+</article>
+</script>
+</body>
+</html>
