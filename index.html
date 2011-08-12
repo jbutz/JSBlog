@@ -135,22 +135,23 @@
 		{
 			tagName: "div",
 			target: "#appView",
-			postViews: {},
 			initialize: function()
 			{
 				_(this).bindAll('render', 'add', 'load');
-				this.collection.bind('reset', this.load, this);
+				this.collection.bind('reset', this.render, this);
 				this.collection.fetch();
 			},
 			render: function()
 			{
+				//this.el = $(this.target);
 				var that = this;
 				$(this.el).empty();
 				_.each(this.collection.models, function(post)
 				{
-					$(that.el).append(that.postViews[post.get('id')].render().el);
+					var view = new window.PostView({model: post});
+					$(that.el).append(view.render().el);
+					view.delegateEvents();
 				});
-				$(this.target).html(this.el);
 				return this;
 			},
 			add: function(post)
@@ -171,7 +172,6 @@
 					datetime: dt.getMonth()+"/"+dt.getDate()+"/"+dt.getFullYear()+" "+hours+":"+min
 				});
 				this.collection.create(post.toJSON());
-				this.postViews[post.get('id')] = new window.PostView({model: post});
 				this.render();
 			},
 			load: function()
@@ -224,7 +224,7 @@
 			}
 		});
 
-		window.App = new window.BlogView({collection: new window.Blog()});
+		window.App = new window.BlogView({collection: new window.Blog(), el: $("#appView")});
 		window.App.render();
 
 		$("button").button();
@@ -247,10 +247,6 @@
 					{
 						$(this).dialog('close');
 					}
-				},
-				close: function(event,ui)
-				{
-					$("#"+winID).remove();
 				}
 			});
 		});
