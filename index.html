@@ -4,6 +4,9 @@
 	<meta charset="utf-8">
 	<title>JS Blog</title>
 	<style>
+		textarea {
+			width: 90%;
+		}
 		#appView {
 			width: 700px;
 			margin: auto;
@@ -30,153 +33,290 @@
 			font-family: monospace;
 			font-weight: 500;
 		}
+		/* jQuery UI */
+		.ui-dialog {
+			border: 1px solid black;
+			border-radius: 5px;
+			background-color: white;
+		}
+		.ui-dialog-titlebar {
+			background-color: #C8C8C8;
+			padding: 5px;
+			font-family: serif;
+			font-size: 1.1em;
+			font-weight: bold;
+			text-shadow: 2px 1px #A9A9A9;
+		}
+		.ui-dialog-titlebar-close {
+			float: right;
+			text-decoration: none;
+			color: black;
+			font-family: monospace;
+			font-size: 1.2em;
+			text-shadow: 0px 0px black;
+			font-weight: 500;
+		}
+		.ui-dialog-content {
+			padding: 5px;
+		}
+		.ui-dialog-content label {
+			display: block;
+			text-shadow: 2px 2px #C8C8C8;
+		}
+		.ui-dialog-buttonset {
+			padding: 5px;
+			text-align: right;
+		}
+		.ui-dialog-buttonset button {
+			margin-right: 10px;
+		}
+		.ui-widget-overlay {
+			position: fixed;
+			top: 0;
+			left: 0;
+			background-color: #C8C8C8;
+			opacity: 0.5;
+		}
 	</style>
 	<script src="jquery-1.6.2.min.js"></script>
+	<script src="jquery-ui-1.8.15.custom.min.js"></script>
 	<script src="underscore-min.js"></script>
+	<script src="json2.js"></script>
 	<script src="backbone-min.js"></script>
 	<!-- <script src="backbone.localStorage-min.js"></script> -->
 	<script src="backbone.localStorage.js"></script>
 	<script>
-
-$(document).ready(function()
-{
-	window.Post = Backbone.Model.extend(
+	$(document).ready(function()
 	{
-		defaults: {
-			datetime: null,
-			body: null,
-			subject: null,
-		}
-	});
+		window.Post = Backbone.Model.extend(
+		{
+			defaults: {
+				datetime: null,
+				body: null,
+				subject: null,
+			}
+		});
 
-	window.PostView = Backbone.View.extend(
-	{
-		tagName: "div",
-		className: "blogPost",
-		events: {
-			"click .deletePost" : "delete"
-		},
-		initialize: function()
+		window.PostView = Backbone.View.extend(
 		{
-			this.model.bind('change', this.render, this);
-			this.render = _.bind(this.render, this);
-		},
-		render: function()
-		{
-			var template = _.template($("#postTemplate").html());
+			tagName: "div",
+			className: "blogPost",
+			events: {
+				"click .deletePost" : "delete"
+			},
+			initialize: function()
+			{
+				this.model.bind('change', this.render, this);
+				this.render = _.bind(this.render, this);
+			},
+			render: function()
+			{
+				var template = _.template($("#postTemplate").html());
 
-			$(this.el).html(template(this.model.toJSON()));
+				$(this.el).html(template(this.model.toJSON()));
 
-			return this;
-		},
-		delete: function()
-		{
-			this.model.destroy();
-			this.remove();
-		}
-	});
+				return this;
+			},
+			delete: function()
+			{
+				this.model.destroy();
+				this.remove();
+			}
+		});
 
-	window.Blog = Backbone.Collection.extend(
-	{
-		model: window.Post,
-		localStorage: new Store("Blog"),
-		comparator: function(post)
+		window.Blog = Backbone.Collection.extend(
 		{
-			return -1 * post.get('datetime');
-		}
-	});
+			model: window.Post,
+			localStorage: new Store("Blog"),
+			comparator: function(post)
+			{
+				return -1 * post.get('datetime');
+			}
+		});
 
-	window.BlogView = Backbone.View.extend(
-	{
-		tagName: "div",
-		target: "#appView",
-		postViews: {},
-		initialize: function()
+		window.BlogView = Backbone.View.extend(
 		{
-			_(this).bindAll('render', 'add', 'load');
-			this.collection.bind('reset', this.load, this);
-			this.collection.fetch();
-		},
-		render: function()
-		{
-			var that = this;
-			$(this.el).empty();
-			_.each(this.collection.models, function(post)
+			tagName: "div",
+			target: "#appView",
+			postViews: {},
+			initialize: function()
 			{
-				$(that.el).append(that.postViews[post.get('id')].render().el);
-			});
-			$(this.target).html(this.el);
-			return this;
-		},
-		add: function(post)
-		{
-			var dt = new Date();
-			post.set({
-				id: dt.valueOf(),
-				datetime: dt.getMonth()+"/"+dt.getDate()+"/"+dt.getFullYear()+" "+dt.getHours()+":"+dt.getMinutes()
-			});
-			this.collection.create(post.toJSON());
-			this.postViews[post.get('id')] = new window.PostView({model: post});
-			console.log(this.collection.toJSON());
-			this.render();
-		},
-		load: function()
-		{
-			var that = this;
-			_.each(this.collection.models, function(post)
+				_(this).bindAll('render', 'add', 'load');
+				this.collection.bind('reset', this.load, this);
+				this.collection.fetch();
+			},
+			render: function()
 			{
-				that.postViews[post.get('id')] = new window.PostView({model: post});
-			});
-		},
-		clear: function()
-		{
-			this.postViews = {};
-			_.each(this.collection.models,function(post)
+				var that = this;
+				$(this.el).empty();
+				_.each(this.collection.models, function(post)
+				{
+					$(that.el).append(that.postViews[post.get('id')].render().el);
+				});
+				$(this.target).html(this.el);
+				return this;
+			},
+			add: function(post)
 			{
-				post.destroy();
-			});
-			this.collection.reset();
-		},
-		submit: function()
-		{
-			var subject = $('#postSubject');
-			var body = $('#postBody');
-			this.add(new window.Post({subject: $('#postSubject').val(), body: $('#postBody').val()}));
-			$('#postSubject').val("");
-			$('#postBody').val("");
-		},
-		backup: function()
-		{
-			var store = localStorage.getItem("Blog");
-			var records = (store && store.split(",")) || [];
-			var out = {};
-			_.each(records, function(id)
+				var dt = new Date();
+				var hours = dt.getHours();
+				var min   = dt.getMinutes();
+				if(hours == 0 || hours == "0")
+				{
+					hours = String("00");
+				}
+				if(min == 0 || min == "0")
+				{
+					min = String("00");
+				}
+				post.set({
+					id: dt.valueOf(),
+					datetime: dt.getMonth()+"/"+dt.getDate()+"/"+dt.getFullYear()+" "+hours+":"+min
+				});
+				this.collection.create(post.toJSON());
+				this.postViews[post.get('id')] = new window.PostView({model: post});
+				console.log(this.collection.toJSON());
+				this.render();
+			},
+			load: function()
 			{
-				out[id] = JSON.parse(localStorage.getItem("Blog-"+id));
-			});
-			return out;	
-		},
-		restore: function(data)
-		{
-			localStorage.clear();
-			var vJSON = $.parseJSON(data);
-			_.each(vJSON,function(elem)
+				var that = this;
+				_.each(this.collection.models, function(post)
+				{
+					that.postViews[post.get('id')] = new window.PostView({model: post});
+				});
+			},
+			clear: function()
 			{
-				var id = elem.id;
+				localStorage.clear();
+				window.location.reload(true);
+			},
+			submit: function()
+			{
+				var subject = $('#postSubject');
+				var body = $('#postBody');
+				this.add(new window.Post({subject: $('#postSubject').val(), body: $('#postBody').val()}));
+				$('#postSubject').val("");
+				$('#postBody').val("");
+			},
+			backup: function()
+			{
 				var store = localStorage.getItem("Blog");
 				var records = (store && store.split(",")) || [];
+				var out = {};
+				_.each(records, function(id)
+				{
+					out[id] = JSON.parse(localStorage.getItem("Blog-"+id));
+				});
+				return out;	
+			},
+			restore: function(data)
+			{
+				localStorage.clear();
+				var vJSON = $.parseJSON(data);
+				_.each(vJSON,function(elem)
+				{
+					var id = elem.id;
+					var store = localStorage.getItem("Blog");
+					var records = (store && store.split(",")) || [];
 
-				localStorage.setItem("Blog-"+id, JSON.stringify(elem));
-				records.push(id.toString());
-				localStorage.setItem("Blog", records.join(","));
-				window.location.reload(true);
-			});
-		}
-	});
+					localStorage.setItem("Blog-"+id, JSON.stringify(elem));
+					records.push(id.toString());
+					localStorage.setItem("Blog", records.join(","));
+					window.location.reload(true);
+				});
+			}
+		});
 
 		window.App = new window.BlogView({collection: new window.Blog()});
 		window.App.render();
-});
+
+		$("button").button();
+
+		$("#addButton").bind("click", function()
+		{
+			$('#dialogAdd').dialog(
+			{
+				closeText: "X",
+				width: 400,
+				modal: true,
+				buttons:
+				{ 
+					'Post': function()
+					{
+						window.App.submit();
+						$(this).dialog('close');
+					},
+					'Cancel': function()
+					{
+						$(this).dialog('close');
+					}
+				},
+				close: function(event,ui)
+				{
+					$("#"+winID).remove();
+				}
+			});
+		});
+		$("button:contains('Delete All')").bind("click", function()
+		{
+			var t = new Date;
+			var winID = "win" + t.valueOf();
+			$("body").append("<div id='"+winID+"' title='Delete All?'>This will delete all posts. Are you sure you want to do this?</div>");
+			$("#"+winID).dialog(
+			{
+				closeText: "X",
+				modal: true,
+				buttons:
+				{
+					'Yes' : function()
+					{
+						window.App.clear();
+						$(this).dialog('close');
+					},
+					'No' : function()
+					{
+						$(this).dialog('close');
+					}
+				},
+				close: function(event,ui)
+				{
+					$("#"+winID).remove();
+				}
+			});
+		});
+		$("button:contains('Backup/Restore')").bind("click", function()
+		{
+			var t = new Date();
+			var winID = "win" + t.valueOf();
+			$("body").append("<div id='"+winID+"' title='Backup / Restore'><textarea id='BackupRestoreTXT' rows='5' cols='30'></textarea></div>");
+			$("#"+winID).dialog(
+			{
+				closeText: "X",
+				modal: true,
+				buttons:
+				{
+					'Backup' : function()
+					{
+						$("#BackupRestoreTXT").val(escape(JSON.stringify(window.App.backup())));
+					},
+					'Restore': function()
+					{
+						var data = unescape($("#BackupRestoreTXT").val());
+						window.App.restore(data);
+					},
+					'Close': function()
+					{
+						$(this).dialog('close');
+					}
+				},
+				close: function(event, ui)
+				{
+					$("#"+winID).remove();
+				}
+			});
+		});
+	});
 	function clickedButton()
 	{
 		window.App.restore('{"123456":{"body": "Hello World","datetime":"01/01/01 01:01","id":"123456","subject":"Foo Bar"}}');
@@ -184,13 +324,13 @@ $(document).ready(function()
 	</script>
 </head>
 <body>
-<button onClick="clickedButton();">TEST</button>
-<button onClick="window.App.clear();">Empty</button>
-<section>
+<button>Delete All</button>
+<button>Backup/Restore</button>
+<button id="addButton">Add</button>
+<div id="dialogAdd" style='display: none' title='New Post'>
 <label>Subject</label><input type='text' id='postSubject'><br>
-<label>Body</label><br><textarea id='postBody' rows='10' cols='30'></textarea>
-<button onClick='window.App.submit();'>Post</button>
-</section>
+<label>Body</label><textarea id='postBody' rows='15' cols='50'></textarea>
+</div>
 <div id="appView"></div>
 <script type="text/template"  id="postTemplate">
 <article>
