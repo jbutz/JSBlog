@@ -83,8 +83,7 @@
 	<script src="underscore-min.js"></script>
 	<script src="json2.js"></script>
 	<script src="backbone-min.js"></script>
-	<!-- <script src="backbone.localStorage-min.js"></script> -->
-	<script src="backbone.localStorage.js"></script>
+	<script src="backbone.localStorage-min.js"></script>
 	<script>
 	$(document).ready(function()
 	{
@@ -112,12 +111,10 @@
 			render: function()
 			{
 				var template = _.template($("#postTemplate").html());
-
 				$(this.el).html(template(this.model.toJSON()));
-
 				return this;
 			},
-			delete: function()
+			'delete': function()
 			{
 				this.model.destroy();
 				this.remove();
@@ -175,7 +172,6 @@
 				});
 				this.collection.create(post.toJSON());
 				this.postViews[post.get('id')] = new window.PostView({model: post});
-				console.log(this.collection.toJSON());
 				this.render();
 			},
 			load: function()
